@@ -1,1 +1,190 @@
 
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Indian Runner - Extreme Level</title>
+    <style>
+        body { 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            background: #222; 
+            font-family: 'Arial', sans-serif;
+            color: white;
+            transition: background 1s; /* Sanfter Farbübergang bei Level-Up */
+        }
+        #game-container { 
+            position: relative; 
+            width: 600px; 
+            height: 200px; 
+            background: #fff9e6; 
+            border-bottom: 5px solid #8B4513; 
+            overflow: hidden; 
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        #dino { 
+            position: absolute; 
+            bottom: 0; 
+            left: 50px; 
+            width: 40px; 
+            height: 50px; 
+            background: #f5cba7; 
+            border-radius: 5px;
+            z-index: 2;
+        }
+        #dino::before {
+            content: "";
+            position: absolute;
+            top: -15px;
+            left: -5px;
+            width: 50px;
+            height: 20px;
+            background: #ff4500;
+            border-radius: 50px 50px 0 0;
+            border-bottom: 3px solid #ffd700;
+        }
+        .cactus { 
+            position: absolute; 
+            bottom: 0; 
+            width: 30px; 
+            height: 30px; 
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+            border-radius: 50% 50% 0 0;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+            color: #333;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .animate-jump { animation: jump 0.5s ease-out; }
+        @keyframes jump {
+            0% { bottom: 0; }
+            45% { bottom: 130px; }
+            100% { bottom: 0; }
+        }
+        #level-display { color: #d35400; }
+    </style>
+</head>
+<body onclick="jump()">
+
+    <h1 id="level-text">LEVEL 1</h1>
+    <div id="game-container">
+        <div id="ui-layer">
+            <div id="level-display">Level: 1</div>
+            <div id="score">Score: 0</div>
+        </div>
+        <div id="dino">
+            <div style="position:absolute; top:10px; left:10px; width:5px; height:5px; background:black; border-radius:50%;"></div>
+        </div>
+    </div>
+    <p>Drücke LEERTASTE oder KLICKE zum Springen</p>
+
+<script>
+    const dino = document.getElementById("dino");
+    const container = document.getElementById("game-container");
+    const scoreElement = document.getElementById("score");
+    const levelElement = document.getElementById("level-display");
+    const levelText = document.getElementById("level-text");
+    
+    let score = 0;
+    let level = 1;
+    let isGameOver = false;
+
+    // Schwierigkeits-Einstellungen
+    let gameSpeed = 6;      
+    let spawnRate = 1600;   
+
+    function jump() {
+        if (!dino.classList.contains("animate-jump") && !isGameOver) {
+            dino.classList.add("animate-jump");
+            setTimeout(() => dino.classList.remove("animate-jump"), 500);
+        }
+    }
+
+    document.addEventListener("keydown", (e) => { 
+        if (e.code === "Space") {
+            e.preventDefault(); 
+            jump();
+        }
+    });
+
+    function updateDifficulty() {
+        // Alle 10 Punkte ein neues Level
+        let newLevel = Math.floor(score / 10) + 1;
+        
+        if (newLevel > level) {
+            level = newLevel;
+            gameSpeed += 1.5; // Deutlich schneller
+            spawnRate = Math.max(500, spawnRate - 200); // Kürzere Abstände
+            
+            // Optisches Feedback
+            levelElement.innerHTML = "Level: " + level;
+            levelText.innerHTML = "LEVEL " + level;
+            
+            // Hintergrundfarbe ändern je nach Level
+            const colors = ["#222", "#2c3e50", "#8e44ad", "#c0392b", "#d35400"];
+            document.body.style.background = colors[(level-1) % colors.length];
+        }
+    }
+
+    function createCactus() {
+        if (isGameOver) return;
+        
+        const cactus = document.createElement("div");
+        cactus.classList.add("cactus");
+        const colors = ["#ff69b4", "#ff1493", "#9400d3", "#00ced1"];
+        cactus.style.background = colors[Math.floor(Math.random() * colors.length)];
+        
+        let cactusPos = 600;
+        cactus.style.left = cactusPos + "px";
+        container.appendChild(cactus);
+
+        let timer = setInterval(() => {
+            if (isGameOver) { clearInterval(timer); return; }
+            
+            let dinoBottom = parseInt(window.getComputedStyle(dino).getPropertyValue("bottom"));
+            let cactusLeft = parseInt(window.getComputedStyle(cactus).getPropertyValue("left"));
+
+            // Präzise Kollisionsabfrage
+            if (cactusLeft > 50 && cactusLeft < 80 && dinoBottom < 30) {
+                isGameOver = true;
+                alert("GAME OVER!\nLevel: " + level + "\nScore: " + score);
+                location.reload();
+            }
+
+            cactusPos -= gameSpeed; 
+            cactus.style.left = cactusPos + "px";
+
+            if (cactusPos < -30) {
+                clearInterval(timer);
+                if (container.contains(cactus)) {
+                    container.removeChild(cactus);
+                }
+                score++;
+                scoreElement.innerHTML = "Score: " + score;
+                updateDifficulty();
+            }
+        }, 20);
+
+        // Nächstes Hindernis planen
+        let randomVariation = Math.random() * 500;
+        setTimeout(createCactus, spawnRate + randomVariation);
+    }
+
+    // Start
+    createCactus();
+</script>
+</body>
+</html>
+
